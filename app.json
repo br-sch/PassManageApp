@@ -5,6 +5,23 @@
       "expo-router"
     ],
     "name": "PassManageApp",
-    "slug": "PassManageApp"
+    "slug": "PassManageApp",
+    "version": "1.0.0",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "bundleIdentifier": "com.brianvm.passmanageapp",
+      "buildNumber": "1.0.0"
+    },
+    "android": {
+      "package": "com.brianvm.passmanageapp",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/icon.png"
+    }
   }
 }

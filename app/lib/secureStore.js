@@ -7,10 +7,10 @@ import { Platform } from 'react-native';
 // On web, SecureStore is not fully persistent; prefer AsyncStorage there.
 const useAsyncOnly = Platform.OS === 'web';
 
-export async function getItem(key) {
+export async function getItem(key, options) {
   try {
   if (!useAsyncOnly) {
-      const v = await SecureStore.getItemAsync(key);
+  const v = await SecureStore.getItemAsync(key, options);
       return v;
     }
     return await AsyncStorage.getItem(key);
@@ -20,10 +20,10 @@ export async function getItem(key) {
   }
 }
 
-export async function setItem(key, value) {
+export async function setItem(key, value, options) {
   try {
   if (!useAsyncOnly) {
-      await SecureStore.setItemAsync(key, value);
+  await SecureStore.setItemAsync(key, value, options);
       return;
     }
     await AsyncStorage.setItem(key, value);
@@ -43,3 +43,6 @@ export async function deleteItem(key) {
     console.warn('deleteItem error', e);
   }
 }
+
+// Prevent expo-router from treating this file as a route
+export default {};
