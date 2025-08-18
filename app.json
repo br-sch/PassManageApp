@@ -7,6 +7,7 @@
     "name": "PassManageApp",
     "slug": "PassManageApp",
     "version": "1.0.0",
+  "userInterfaceStyle": "dark",
     "icon": "./assets/icon.png",
     "ios": {
       "bundleIdentifier": "com.brianvm.passmanageapp",

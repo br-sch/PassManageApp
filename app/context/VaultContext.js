@@ -92,7 +92,8 @@ export function VaultProvider({ children }) {
     await persist([{ id, title, username, password, lastChangedAt: Date.now(), folderId }, ...items]);
   };
 
-  const addItemsBulk = async (list) => {
+  const addItemsBulk = async (list, foldersArg = folders) => {
+    console.log("Folders state before bulking~~~~~~~~:", foldersArg);
     const base = Date.now();
     const prepared = list.map((e, idx) => ({
       id: (base + idx).toString(),
@@ -102,7 +103,13 @@ export function VaultProvider({ children }) {
       lastChangedAt: e.lastChangedAt ?? Date.now(),
       folderId: e.folderId ?? null,
     }));
-    await persist([...prepared, ...items]);
+    const nextItems = [...prepared, ...items];
+
+    // Use the foldersArg provided, or fallback to current state
+    await persist(nextItems, [...foldersArg]); // save items + correct folders
+    setItems(nextItems);               // update React state so UI sees the new entries
+    setFolders([...foldersArg]);       // ensure folders state is updated to match
+    console.log("Folders state after bulking~~~~~~~~:", foldersArg);
   };
 
   const removeItem = async (id) => {
@@ -120,10 +127,23 @@ export function VaultProvider({ children }) {
 
   // Folder APIs
   const addFolder = async (name) => {
+    console.log(`Adding folder: ${name}`);
     const id = `f_${Date.now().toString()}`;
-    const next = [{ id, name }, ...folders];
-    await persist(items, next);
-    return id;
+    let next;
+
+    // Use functional update so we always base the new folders list on the latest state
+    setFolders((prev) => {
+      next = [{ id, name }, ...prev];
+      return next;
+    });
+
+    console.log("Folders state before adding~~~~~~~~:", folders);
+    
+    await persist(items, next); // save to storage (persist will also setFolders but that's fine)
+    console.log("Folders state after adding~~~~~~~~:", next);
+
+    console.log(`✅ Folder created: ${name} (id: ${id})`);
+    return id; // only return id, state will be updated outside
   };
 
   const renameFolder = async (id, name) => {

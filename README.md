@@ -1,23 +1,30 @@
-# PassManageApp
+# Expo Router Example
 
-A simple, elegant password manager built with Expo + Expo Router. Local-only: credentials are stored on-device using Expo SecureStore (or AsyncStorage fallback).
+Use [`expo-router`](https://docs.expo.dev/router/introduction/) to build native navigation using files in the `app/` directory.
 
-## Run locally
+## How to start an app project
 
-```sh
-npm install
-npm run web   # or: npm run android / npm run ios
+to  create an app enviroment:
+```
+npx create-expo-app@latest -e with-router
+```
+imports node_modules, app.json, babel.confog.js, index.js, package-lock.json, package.json, readme.md
+
+## 🚀 How to use
+```
+npx expo start --tunnel --clear
 ```
 
-## Features
+scan the QR code and open with Expo app
 
-- Login and registration (local, hashed with SHA-256)
-- Per-user vault stored securely on device
-- Add entries: Source/Company, Username, Password
-- Delete entries
 
-## Notes
+## Deploy
 
-- This is a demo and doesn’t implement end-to-end encryption or cloud sync.
-- For production, prefer a proven, audited password manager.
+Deploy on all platforms with Expo Application Services (EAS).
 
+- Deploy the website: `npx eas-cli deploy` — [Learn more](https://docs.expo.dev/eas/hosting/get-started/)
+- Deploy on iOS and Android using: `npx eas-cli build` — [Learn more](https://expo.dev/eas)
+
+## 📝 Notes
+
+- [Expo Router: Docs](https://docs.expo.dev/router/introduction/)
