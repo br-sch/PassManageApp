@@ -101,12 +101,12 @@ export default function AuthScreen() {
         <TouchableOpacity style={[styles.primaryBtn, busy && { opacity: 0.6 }]} onPress={onSubmit} disabled={busy}>
           <Text style={styles.primaryBtnText}>{busy ? 'Please wait…' : (isRegister ? 'Sign up' : 'Log in')}</Text>
         </TouchableOpacity>
-    {Platform.OS !== 'web' && canBio && hasBio && !isRegister && (
+        {Platform.OS !== 'web' && canBio && !isRegister && (
           <TouchableOpacity
             style={[styles.primaryBtn, { backgroundColor: '#2563eb' }]}
             onPress={async () => {
               setError('');
-      try { await biometricUnlock(email.trim()); } catch (e) { setError(e.message || 'Fingerprint unlock failed'); }
+              try { await biometricUnlock(email.trim()); } catch (e) { setError(e.message || 'Fingerprint unlock failed'); }
             }}
           >
             <Text style={[styles.primaryBtnText, { color: '#dbeafe' }]}>Unlock with fingerprint</Text>

@@ -276,7 +276,7 @@ export default function VaultScreen() {
             </View>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
               <TouchableOpacity style={[styles.addBtn, { flex: 1 }]} onPress={async () => {
-                await updateItem(editing.id, { title: editTitle.trim(), username: editUsername.trim(), password: editPassword, folderId: editFolderId });
+                await updateItem({ id: editing.id, title: editTitle.trim(), username: editUsername.trim(), password: editPassword, folderId: editFolderId });
                 setEditing(null);
               }}>
                 <Text style={styles.addBtnText}>Save</Text>
@@ -313,6 +313,13 @@ export default function VaultScreen() {
                   style={styles.eyeBtn}
                 >
                   <Feather name={addShowPassword ? 'eye' : 'eye-off'} size={20} color="#cbd5e1" style={{ opacity: 0.7 }} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => copyToClipboard(addPassword, 'Password copied to clipboard')}
+                  accessibilityLabel="Copy password"
+                  style={[styles.eyeBtn, { right: 36 }]} // visually offset from eye icon
+                >
+                  <Feather name="copy" size={20} color="#cbd5e1" style={{ opacity: 0.7 }} />
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
@@ -379,11 +386,16 @@ export default function VaultScreen() {
                 onKeyPress={onAnyInteraction}
               />
               <TouchableOpacity
-                style={[styles.secondaryBtn, !newFolderName.trim() && { opacity: 0.5 }]}
-                disabled={!newFolderName.trim()}
+                style={[styles.secondaryBtn, !newFolderName.trim() && { opacity: 0.5 }]} 
+                disabled={!newFolderName.trim()} 
                 onPress={async () => {
                   const n = newFolderName.trim();
                   if (!n) return;
+                  const exists = folders.some(f => f.name.trim().toLowerCase() === n.toLowerCase());
+                  if (exists) {
+                    Alert.alert('Duplicate Folder', `A folder named "${n}" already exists.`);
+                    return;
+                  }
                   const id = await addFolder(n);
                   setSelectedFolder(id);
                   setNewFolderName('');

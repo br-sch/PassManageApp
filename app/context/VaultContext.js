@@ -1,3 +1,15 @@
+/**
+ * VaultContext.js
+ *
+ * Provides vault state and logic for the app, including:
+ * - Password and folder management
+ * - Bulk import/export operations
+ * - Secure persistence and state updates
+ * - Folder creation, renaming, and deletion
+ *
+ * Console loggers are included for key vault events and errors.
+ */
+
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getItem, setItem } from '../lib/secureStore';
 import { useAuth } from './AuthContext';
@@ -87,74 +99,136 @@ export function VaultProvider({ children }) {
     }
   };
 
+  /**
+   * addItem
+   * Adds a new password entry to the vault.
+   * Logs addition event and errors.
+   */
   const addItem = async ({ title, username, password, folderId = null }) => {
-    const id = Date.now().toString();
-    await persist([{ id, title, username, password, lastChangedAt: Date.now(), folderId }, ...items]);
+    try {
+      const id = Date.now().toString();
+      await persist([{ id, title, username, password, lastChangedAt: Date.now(), folderId }, ...items]);
+      console.log(`[Vault] Added item: ${title} (id: ${id})`);
+    } catch (e) {
+      console.error('[Vault] Failed to add item:', e);
+    }
   };
 
+  /**
+   * addItemsBulk
+   * Adds multiple items to the vault at once, updating folders as needed.
+   * Logs bulk addition event and errors.
+   */
   const addItemsBulk = async (list, foldersArg = folders) => {
-    console.log("Folders state before bulking~~~~~~~~:", foldersArg);
-    const base = Date.now();
-    const prepared = list.map((e, idx) => ({
-      id: (base + idx).toString(),
-      title: e.title,
-      username: e.username,
-      password: e.password,
-      lastChangedAt: e.lastChangedAt ?? Date.now(),
-      folderId: e.folderId ?? null,
-    }));
-    const nextItems = [...prepared, ...items];
-
-    // Use the foldersArg provided, or fallback to current state
-    await persist(nextItems, [...foldersArg]); // save items + correct folders
-    setItems(nextItems);               // update React state so UI sees the new entries
-    setFolders([...foldersArg]);       // ensure folders state is updated to match
-    console.log("Folders state after bulking~~~~~~~~:", foldersArg);
+    try {
+      console.log('[Vault] Bulk adding items:', list.length);
+      const base = Date.now();
+      const prepared = list.map((e, idx) => ({
+        id: (base + idx).toString(),
+        title: e.title,
+        username: e.username,
+        password: e.password,
+        lastChangedAt: e.lastChangedAt ?? Date.now(),
+        folderId: e.folderId ?? null,
+      }));
+      const nextItems = [...prepared, ...items];
+      await persist(nextItems, [...foldersArg]);
+      setItems(nextItems);
+      setFolders([...foldersArg]);
+      console.log('[Vault] Bulk add complete. Total items:', nextItems.length);
+    } catch (e) {
+      console.error('[Vault] Bulk add failed:', e);
+    }
   };
 
+  /**
+   * removeItem
+   * Removes an item from the vault by id.
+   * Logs removal event and errors.
+   */
   const removeItem = async (id) => {
-    await persist(items.filter((i) => i.id !== id));
+    try {
+      await persist(items.filter((i) => i.id !== id));
+      setItems(items.filter((i) => i.id !== id));
+      console.log(`[Vault] Removed item: ${id}`);
+    } catch (e) {
+      console.error('[Vault] Failed to remove item:', e);
+    }
   };
 
-  const updateItem = async (id, patch) => {
-    const next = items.map((i) => {
-      if (i.id !== id) return i;
-      const passwordChanged = Object.prototype.hasOwnProperty.call(patch, 'password') && patch.password !== i.password;
-      return { ...i, ...patch, ...(passwordChanged ? { lastChangedAt: Date.now() } : {}) };
-    });
-    await persist(next);
+  /**
+   * updateItem
+   * Updates an existing item in the vault.
+   * Logs update event and errors.
+   */
+  const updateItem = async (item) => {
+    try {
+      const next = items.map((i) => (i.id === item.id ? { ...i, ...item, lastChangedAt: Date.now() } : i));
+      await persist(next);
+      setItems(next);
+      console.log(`[Vault] Updated item: ${item.id}`);
+    } catch (e) {
+      console.error('[Vault] Failed to update item:', e);
+    }
   };
 
   // Folder APIs
+  /**
+   * addFolder
+   * Adds a new folder to the vault.
+   * Logs folder creation event and errors.
+   */
   const addFolder = async (name) => {
-    console.log(`Adding folder: ${name}`);
-    const id = `f_${Date.now().toString()}`;
-    let next;
-
-    // Use functional update so we always base the new folders list on the latest state
-    setFolders((prev) => {
-      next = [{ id, name }, ...prev];
-      return next;
-    });
-
-    console.log("Folders state before adding~~~~~~~~:", folders);
-    
-    await persist(items, next); // save to storage (persist will also setFolders but that's fine)
-    console.log("Folders state after adding~~~~~~~~:", next);
-
-    console.log(`✅ Folder created: ${name} (id: ${id})`);
-    return id; // only return id, state will be updated outside
+    try {
+      const trimmed = name.trim().toLowerCase();
+      if (folders.some(f => f.name.trim().toLowerCase() === trimmed)) {
+        console.warn(`[Vault] Folder with name "${name}" already exists.`);
+        return; // Optionally show an alert here
+      }
+      const id = `f_${Date.now().toString()}`;
+      setFolders((prev) => {
+        const next = [{ id, name }, ...prev];
+        console.log(`[Vault] Added folder: ${name} (id: ${id})`);
+        return next;
+      });
+      await persist(items, [{ id, name }, ...folders]);
+    } catch (e) {
+      console.error('[Vault] Failed to add folder:', e);
+    }
   };
 
+  /**
+   * renameFolder
+   * Renames a folder in the vault.
+   * Logs rename event and errors.
+   */
   const renameFolder = async (id, name) => {
-    const next = folders.map((f) => (f.id === id ? { ...f, name } : f));
-    await persist(items, next);
+    try {
+      const next = folders.map((f) => (f.id === id ? { ...f, name } : f));
+      await persist(items, next);
+      setFolders(next);
+      console.log(`[Vault] Renamed folder: ${id} to ${name}`);
+    } catch (e) {
+      console.error('[Vault] Failed to rename folder:', e);
+    }
   };
 
+  /**
+   * removeFolder
+   * Removes a folder from the vault and updates items.
+   * Logs removal event and errors.
+   */
   const removeFolder = async (id) => {
-    const nextFolders = folders.filter((f) => f.id !== id);
-    const nextItems = items.map((i) => (i.folderId === id ? { ...i, folderId: null } : i));
-    await persist(nextItems, nextFolders);
+    try {
+      const nextFolders = folders.filter((f) => f.id !== id);
+      const nextItems = items.map((i) => (i.folderId === id ? { ...i, folderId: null } : i));
+      await persist(nextItems, nextFolders);
+      setFolders(nextFolders);
+      setItems(nextItems);
+      console.log(`[Vault] Removed folder: ${id}`);
+    } catch (e) {
+      console.error('[Vault] Failed to remove folder:', e);
+    }
   };
 
   const value = useMemo(() => ({ items, folders, loading, addItem, addItemsBulk, removeItem, updateItem, addFolder, renameFolder, removeFolder }), [items, folders, loading]);

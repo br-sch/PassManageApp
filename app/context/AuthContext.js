@@ -1,3 +1,18 @@
+/**
+ * AuthContext.js
+ *
+ * Provides authentication context and logic for the app, including:
+ * - User registration and login
+ * - Password verification and brute-force protection
+ * - Biometric authentication (fingerprint/face)
+ * - Session management and secure storage
+ * - User deletion and lockout handling
+ *
+ * All cryptographic operations use CryptoJS. Secure storage is handled via SecureStore/AsyncStorage.
+ *
+ * Console loggers are included for key authentication events and errors.
+ */
+
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getItem, setItem, deleteItem } from '../lib/secureStore';
 import CryptoJS from 'crypto-js';
@@ -33,14 +48,28 @@ export function AuthProvider({ children }) {
   // These values balance UX and security for a JS-only derivation.
   const PBKDF2_ITERATIONS = Platform.OS === 'web' ? 100000 : 30000;
 
-  // (Removed biometric index helpers; username is required for biometric unlock)
-
   // Verifier helpers (no RNG): store an HMAC over a constant message using derived key.
+  /**
+   * makeVerifierMac
+   * Creates a MAC (HMAC-SHA256) over a constant message using the derived key.
+   * Used to verify password correctness without storing the password or salt.
+   * @param {string} hexKey - Derived key in hex
+   * @returns {object} - Verifier object
+   */
   const makeVerifierMac = (hexKey) => {
     const key = CryptoJS.enc.Hex.parse(hexKey);
     const mac = CryptoJS.HmacSHA256('verified', key).toString(); // hex
     return { t: 'mac', mac };
   };
+
+  /**
+   * checkVerifier
+   * Validates a stored verifier against a derived key.
+   * Supports legacy AES-encrypted verifiers for migration.
+   * @param {string|object} stored - Stored verifier
+   * @param {string} hexKey - Derived key in hex
+   * @returns {boolean} - True if valid, false otherwise
+   */
   const checkVerifier = (stored, hexKey) => {
     try {
       const obj = typeof stored === 'string' ? JSON.parse(stored) : stored;
@@ -64,20 +93,36 @@ export function AuthProvider({ children }) {
     }
   };
 
+  /**
+   * register
+   * Registers a new user with email and password.
+   * Stores a verifier for password validation. Throws if user exists.
+   * Logs registration events and errors.
+   */
   const register = async (email, password) => {
     const ehash = emailHash(email);
     const existingVerifier = await getItem(verifierKeyFor(ehash));
-    if (existingVerifier) throw new Error('User already exists');
+    if (existingVerifier) {
+      console.warn(`[Auth] Registration failed: User already exists (${email})`);
+      throw new Error('User already exists');
+    }
     const saltHex = emailSaltHex(email);
-  const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS }).toString();
-  // store verifier as HMAC(no RNG required)
-  const verifier = makeVerifierMac(key);
-  await setItem(verifierKeyFor(ehash), JSON.stringify(verifier));
+    const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS }).toString();
+    // store verifier as HMAC(no RNG required)
+    const verifier = makeVerifierMac(key);
+    await setItem(verifierKeyFor(ehash), JSON.stringify(verifier));
     await setItem(SESSION_KEY, email);
     setDerivedKey(key);
     setUser({ email });
+    console.log(`[Auth] Registration successful: ${email}`);
   };
 
+  /**
+   * login
+   * Authenticates a user with email and password.
+   * Implements brute-force protection and lockout.
+   * Logs login attempts, lockouts, and errors.
+   */
   const login = async (email, password) => {
     const ehash = emailHash(email);
     // Brute-force protection: check lock status
@@ -87,13 +132,16 @@ export function AuthProvider({ children }) {
     if (attempts.lockUntil && now < attempts.lockUntil) {
       const remain = Math.max(0, attempts.lockUntil - now);
       const mins = Math.ceil(remain / 60000);
+      console.warn(`[Auth] Login locked: ${email} for ${mins}m`);
       throw new Error(`Too many attempts. Try again in ${mins}m`);
     }
-
-  const verifier = await getItem(verifierKeyFor(ehash));
-  if (!verifier) throw new Error('Invalid credentials');
+    const verifier = await getItem(verifierKeyFor(ehash));
+    if (!verifier) {
+      console.warn(`[Auth] Login failed: Invalid credentials (${email})`);
+      throw new Error('Invalid credentials');
+    }
     const saltHex = emailSaltHex(email);
-  const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS }).toString();
+    const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS }).toString();
     try {
       const ok = checkVerifier(verifier, key);
       if (!ok) throw new Error('Invalid credentials');
@@ -105,8 +153,10 @@ export function AuthProvider({ children }) {
       await setItem(attemptsKeyFor(ehash), JSON.stringify(next));
       if (next.lockUntil && next.lockUntil > now) {
         const mins = Math.ceil(lockMs / 60000);
+        console.warn(`[Auth] Login locked: ${email} for ${mins}m`);
         throw new Error(`Too many attempts. Locked for ${mins}m`);
       }
+      console.warn(`[Auth] Login failed: Invalid credentials (${email})`);
       throw new Error('Invalid credentials');
     }
     await setItem(SESSION_KEY, email);
@@ -114,12 +164,19 @@ export function AuthProvider({ children }) {
     await setItem(attemptsKeyFor(ehash), JSON.stringify({ count: 0, lockUntil: 0 }));
     setDerivedKey(key);
     setUser({ email });
+    console.log(`[Auth] Login successful: ${email}`);
   };
 
+  /**
+   * logout
+   * Logs out the current user and clears session state.
+   * Logs logout event.
+   */
   const logout = async () => {
     await deleteItem(SESSION_KEY);
     setUser(null);
     setDerivedKey(null);
+    console.log('[Auth] User logged out');
   };
 
   // Biometric unlock: attempt to derive key without password if previously opted-in.

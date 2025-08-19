@@ -1,17 +1,34 @@
-// Clipboard helper with web fallback
-// copyToClipboard(text, msg?) -> copies text and shows a small alert/toast
-import { Platform, Alert } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+/**
+ * clipboard.js
+ *
+ * Provides a cross-platform clipboard helper for copying text.
+ * Uses Expo Clipboard API on native, and browser clipboard on web.
+ * Includes logging for copy events and errors.
+ */
 
-export async function copyToClipboard(text, successMsg = 'Copied') {
+import * as Clipboard from 'expo-clipboard';
+import { Platform, Alert } from 'react-native';
+
+/**
+ * copyToClipboard
+ *
+ * Copies the given text to the clipboard and shows a success message.
+ * Logs copy events and errors for debugging.
+ * @param {string} text - Text to copy
+ * @param {string} [successMsg='Password copied'] - Message to show on success
+ */
+export async function copyToClipboard(text, successMsg = 'Password copied') {
   if (Platform.OS === 'web') {
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
         alert(successMsg);
+        console.log('[Clipboard] Text copied using navigator.clipboard');
         return;
       }
-    } catch {}
+    } catch (e) {
+      console.error('[Clipboard] navigator.clipboard failed:', e);
+    }
     try {
       const ta = document.createElement('textarea');
       ta.value = text;
@@ -22,16 +39,25 @@ export async function copyToClipboard(text, successMsg = 'Copied') {
       ta.select();
       const ok = document.execCommand('copy');
       document.body.removeChild(ta);
-      if (ok) alert(successMsg); else alert('Copy not supported');
+      if (ok) {
+        alert(successMsg);
+        console.log('[Clipboard] Text copied using execCommand');
+      } else {
+        alert('Copy not supported');
+        console.warn('[Clipboard] execCommand copy not supported');
+      }
     } catch (e) {
       alert('Copy failed');
+      console.error('[Clipboard] execCommand copy failed:', e);
     }
   } else {
     try {
       await Clipboard.setStringAsync(text);
       Alert.alert('Copied', successMsg);
+      console.log('[Clipboard] Text copied using Expo Clipboard');
     } catch (e) {
       Alert.alert('Copy failed', 'Could not copy to clipboard');
+      console.error('[Clipboard] Expo Clipboard copy failed:', e);
     }
   }
 }
