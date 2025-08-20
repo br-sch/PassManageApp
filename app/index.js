@@ -115,6 +115,11 @@ export default function AuthScreen() {
         <TouchableOpacity onPress={() => setIsRegister((v) => !v)}>
           <Text style={styles.link}>{isRegister ? 'Have an account? Log in' : "New here? Create an account"}</Text>
         </TouchableOpacity>
+        {isRegister && (
+        <Text style={{ color: '#fca5a5', marginBottom: 8, textAlign: 'center' }}>
+          For your privacy and security, there is no way to recover your account if you forget your username or password. Please save your credentials securely.
+        </Text>
+      )}
       </View>
 
       <Text style={styles.footer}>Your passwords are stored locally on this device.</Text>

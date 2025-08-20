@@ -485,6 +485,10 @@ export default function VaultScreen() {
             <ScrollView style={{ maxHeight: 240, marginTop: 8 }} onScrollBeginDrag={onAnyInteraction} onMomentumScrollBegin={onAnyInteraction}>
               <Text selectable style={{ color: '#e5e7eb' }}>{exportBlob}</Text>
             </ScrollView>
+            {/* Export clarification */}
+            <Text style={{ color: '#fca5a5', marginBottom: 8, textAlign: 'center' }}>
+              You can restore your vault on another device only if you use the same username and password you registered with. If you lose your credentials, your vault cannot be recovered.
+            </Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
               <TouchableOpacity
                 style={[styles.secondaryBtn, { flex: 1, alignItems: 'center' }]}
@@ -515,6 +519,10 @@ export default function VaultScreen() {
               onChangeText={(t) => { setImportBlob(t); onAnyInteraction(); }}
               onKeyPress={onAnyInteraction}
             />
+            {/* Import clarification */}
+            <Text style={{ color: '#fca5a5', marginBottom: 8, textAlign: 'center' }}>
+              To import a vault backup, you must use the same username and password you originally registered with. If your credentials do not match, import will fail and your vault cannot be restored.
+            </Text>
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
               <TouchableOpacity
                 style={[styles.addBtn, { flex: 1 }]}

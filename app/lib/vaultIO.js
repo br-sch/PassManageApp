@@ -1,3 +1,5 @@
+// Prevent expo-router from treating this file as a route
+export default {};
 /**
  * vaultIO.js
  *
@@ -7,6 +9,7 @@
  */
 
 import CryptoJS from 'crypto-js';
+import * as Crypto from 'expo-crypto';
 
 /**
  * buildBackupPayload
@@ -35,28 +38,15 @@ export function buildBackupPayload({ userEmail, folders, items }) {
   return payload;
 }
 
-/**
- * encryptBackupJson
- *
- * Encrypts a backup payload JSON string using AES-CBC and the provided key.
- * Logs encryption events and errors.
- * @param {string} derivedKey - AES key in hex
- * @param {object} payload - Backup payload object
- * @returns {string} - Encrypted backup string
- */
 export function encryptBackupJson(derivedKey, payload) {
   try {
     const plain = JSON.stringify(payload);
     const key = CryptoJS.enc.Hex.parse(derivedKey);
-    let iv;
-    try {
-      iv = CryptoJS.lib.WordArray.random(16);
-    } catch (e) {
-      // Fallback if native RNG is unavailable
-      const seed = CryptoJS.SHA256(`${Date.now()}:${derivedKey}`).toString();
-      iv = CryptoJS.enc.Hex.parse(seed.slice(0, 32));
-      console.warn('[VaultIO] Native RNG unavailable, using fallback IV');
-    }
+    // Always use expo-crypto for IV generation
+    const buf = new Uint8Array(16);
+    // Synchronously supported in Expo Go
+    Crypto.getRandomValues(buf);
+    const iv = CryptoJS.enc.Hex.parse(Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join(''));
     const cipher = CryptoJS.AES.encrypt(plain, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
     const result = `${CryptoJS.enc.Hex.stringify(iv)}:${cipher.toString()}`;
     console.log('[VaultIO] Backup encrypted');
@@ -67,15 +57,6 @@ export function encryptBackupJson(derivedKey, payload) {
   }
 }
 
-/**
- * decryptBackupString
- *
- * Decrypts an encrypted backup string using AES-CBC and the provided key.
- * Logs decryption events and errors.
- * @param {string} derivedKey - AES key in hex
- * @param {string} encrypted - Encrypted backup string
- * @returns {object} - Decrypted backup payload object
- */
 export function decryptBackupString(derivedKey, encrypted) {
   try {
     const [ivHex, ct] = String(encrypted).split(':');

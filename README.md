@@ -1,30 +1,60 @@
-# Expo Router Example
+# PassManageApp
 
-Use [`expo-router`](https://docs.expo.dev/router/introduction/) to build native navigation using files in the `app/` directory.
+A secure, privacy-first password manager built with React Native and Expo. All vault data is stored locally and encrypted on your device. No cloud, no tracking, no ads.
 
-## How to start an app project
+## Features
 
-to  create an app enviroment:
-```
-npx create-expo-app@latest -e with-router
-```
-imports node_modules, app.json, babel.confog.js, index.js, package-lock.json, package.json, readme.md
+- **Local-Only Vault:** All passwords and folders are encrypted and stored locally using device-secure storage.
+- **Biometric Unlock:** Unlock your vault with fingerprint/face ID (if enabled for your account).
+- **Folder Organization:** Organize entries into folders. Prevents duplicate folder names.
+- **Add/Edit/Delete Entries:** Easily manage passwords, usernames, and folders.
+- **Password Generator:** Generate strong random passwords.
+- **Copy to Clipboard:** Copy passwords with a single tap (including in Add Entry modal).
+- **Import/Export:** Backup and restore your vault with encrypted files. No web dependencies.
+- **Bulk Import:** Imports entries and folders, mapping them correctly and preventing duplicates.
+- **Auto-Logout:** Secure auto-logout after inactivity.
+- **Error Handling & Logging:** Robust error handling and detailed logging for all major actions.
 
-## 🚀 How to use
-```
-npx expo start --tunnel --clear
-```
+## How to Use
 
-scan the QR code and open with Expo app
+1. **Install Dependencies:**
+	```bash
+	npm install
+	npx expo install expo-secure-store expo-clipboard crypto-js
+	```
 
+2. **Start the App:**
+	```bash
+	npx expo start --tunnel
+	```
 
-## Deploy
+3. **Register/Login:**
+	- Create a new account with a username and password.
+	- Enable biometric unlock after first login (optional).
 
-Deploy on all platforms with Expo Application Services (EAS).
+4. **Add Entries:**
+	- Tap "Add Entry" to create a new password entry.
+	- Use the password generator or enter your own.
+	- Assign to a folder (or create a new one).
+	- Tap the copy icon to copy the password.
 
-- Deploy the website: `npx eas-cli deploy` — [Learn more](https://docs.expo.dev/eas/hosting/get-started/)
-- Deploy on iOS and Android using: `npx eas-cli build` — [Learn more](https://expo.dev/eas)
+5. **Manage Folders:**
+	- Create, rename, or delete folders.
+	- Duplicate folder names are blocked (case-insensitive).
 
-## 📝 Notes
+6. **Import/Export Vault:**
+	- Export: Save an encrypted backup of your vault.
+	- Import: Restore from a backup file. Entries and folders are mapped and deduplicated.
 
-- [Expo Router: Docs](https://docs.expo.dev/router/introduction/)
+7. **Security:**
+	- All data is encrypted with AES and stored using Expo SecureStore.
+	- Biometric unlock is device-bound and optional.
+	- Auto-logout after 5 minutes of inactivity.
+	- **Important:** For your privacy and security, there is no way to recover your account if you forget your username or password. If you have exported your vault, you can import it on another device—but only if you use the same username and password you originally registered with.
+## Development Notes
+- All logic is modularized and documented for maintainability.
+- Logging is enabled for all major events and errors.
+- No cloud sync or external storage; privacy is guaranteed.
+
+## License
+MIT
