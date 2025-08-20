@@ -5,6 +5,7 @@
 // - Enforces auto-logout on inactivity via a reusable hook
 // Sections below are annotated to ease maintenance.
 
+
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, ScrollView, ActivityIndicator } from 'react-native';
