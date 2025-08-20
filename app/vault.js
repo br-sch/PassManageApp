@@ -4,7 +4,9 @@
 // - Handles export/import UX while delegating crypto/merge logic to lib helpers
 // - Enforces auto-logout on inactivity via a reusable hook
 // Sections below are annotated to ease maintenance.
+
 import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useVault } from './context/VaultContext';
 import { useAuth } from './context/AuthContext';
@@ -87,6 +89,8 @@ export default function VaultScreen() {
       if (!derivedKey) return Alert.alert('Not ready', 'Please log in first.');
       const payload = buildBackupPayload({ userEmail: user?.email, folders, items });
       const enc = encryptBackupJson(derivedKey, payload);
+      // Save encrypted blob in AsyncStorage
+      await AsyncStorage.setItem('vault_encrypted_blob', enc);
       setExportBlob(enc);
       setShowExportModal(true);
     } catch (e) {
