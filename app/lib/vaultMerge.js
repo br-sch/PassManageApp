@@ -1,3 +1,4 @@
+// ...existing code...
 /**
  * vaultMerge.js
  *

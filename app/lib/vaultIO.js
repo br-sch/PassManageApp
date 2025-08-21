@@ -1,5 +1,6 @@
+// ...existing code...
 // Prevent expo-router from treating this file as a route
-export default {};
+// ...existing code...
 /**
  * vaultIO.js
  *

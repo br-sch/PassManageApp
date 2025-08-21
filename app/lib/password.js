@@ -1,3 +1,4 @@
+// ...existing code...
 import * as ExpoCrypto from 'expo-crypto';
 import CryptoJS from 'crypto-js';
 
@@ -85,4 +86,4 @@ export function validatePassword(pwd) {
 }
 
 // Prevent expo-router from treating this file as a route
-export default {};
+// ...existing code...
