@@ -1,5 +1,20 @@
-// Styles: Auth screen (login/register)
-// Centralized to avoid duplication and ensure consistent dark theme
+/**
+ * authStyles.js
+ *
+ * Centralized style definitions for the authentication screens (login/register) in Vaulton.
+ *
+ * Purpose:
+ * - Provides a consistent dark theme for all authentication-related UI components.
+ * - Centralizes style management to avoid duplication and simplify maintenance.
+ *
+ * Usage:
+ * - Import as `authStyles` in authentication screens to style containers, forms, buttons, inputs, and text.
+ * - Designed for use with React Native's StyleSheet API.
+ *
+ * Theming:
+ * - Colors and layout are chosen for accessibility and a modern dark appearance.
+ * - Easily extendable for new UI elements or theme changes.
+ */
 import { StyleSheet } from 'react-native';
 
 // Styles for the Auth (login/register) screen

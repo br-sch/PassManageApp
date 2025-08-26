@@ -46,23 +46,23 @@ export async function mergeBackupData(data, { items, folders, addFolder, addItem
 
     // Prepare items for import, map folderId using folderIdMap
     const newItems = [];
-    for (let idx = 0; idx < (data.entries || []).length; idx++) {
-      const e = data.entries[idx];
-      //console.log(`[VaultMerge] Importing entry #${idx}:`, e);
-      const exists = items.some(i => i.title === e.t && i.username === e.u);
+    for (let idx = 0; idx < (data.items || []).length; idx++) {
+      const e = data.items[idx];
+      //console.log(`[VaultMerge] Importing item #${idx}:`, e);
+      const exists = items.some(i => i.title === e.title && i.username === e.username);
       if (exists) {
-        //console.log(`[VaultMerge] Skipped duplicate entry: ${e.t} (${e.u})`);
+        //console.log(`[VaultMerge] Skipped duplicate item: ${e.title} (${e.username})`);
         skipped++;
         continue;
       }
       // Log folderId mapping
       let mappedFolderId = e.folderId ? folderIdMap.get(e.folderId) : null;
-      console.log(`[VaultMerge] Entry folderId:`, e.folderId, 'Mapped to:', mappedFolderId);
+      console.log(`[VaultMerge] Item folderId:`, e.folderId, 'Mapped to:', mappedFolderId);
       newItems.push({
-        title: e.t,
-        username: e.u,
-        password: e.p,
-        lastChangedAt: e.ts,
+        title: e.title,
+        username: e.username,
+        password: e.password,
+        lastChangedAt: e.lastChangedAt,
         folderId: mappedFolderId,
       });
       added++;

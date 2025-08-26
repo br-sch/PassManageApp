@@ -1,5 +1,5 @@
 // ...existing code...
-import * as ExpoCrypto from 'expo-crypto';
+import 'react-native-get-random-values';
 import CryptoJS from 'crypto-js';
 
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
@@ -9,17 +9,9 @@ const SPECIAL = '!@#$%^&*()-_=+[]{};:,.?';
 const ALL = LOWER + UPPER + DIGITS + SPECIAL;
 
 function randIndex(max) {
-  try {
-    const buf = new Uint32Array(1);
-    ExpoCrypto.getRandomValues(buf);
-    return buf[0] % max;
-  } catch (e) {
-    // Fallback: CryptoJS PRNG (less ideal). Still unpredictable for casual use.
-    const n = CryptoJS.lib.WordArray.random(4);
-    const hex = CryptoJS.enc.Hex.stringify(n);
-    const val = parseInt(hex.slice(0, 8), 16);
-    return val % max;
-  }
+  const buf = new Uint32Array(1);
+  global.crypto.getRandomValues(buf);
+  return buf[0] % max;
 }
 
 function pick(str) {

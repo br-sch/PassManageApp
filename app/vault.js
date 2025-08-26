@@ -1,29 +1,51 @@
-// VaultScreen
-// Responsibilities:
-// - Presents the encrypted vault UI (list, search, folder management, add/edit)
-// - Handles export/import UX while delegating crypto/merge logic to lib helpers
-// - Enforces auto-logout on inactivity via a reusable hook
-// Sections below are annotated to ease maintenance.
 
+/**
+ * VaultScreen
+ *
+ * Main screen for managing the encrypted password vault in the Vaulton app.
+ *
+ * Responsibilities:
+ * - Presents the encrypted vault UI: list, search, folder management, add/edit entries.
+ * - Handles export/import of vault data, delegating cryptography and merge logic to lib helpers.
+ * - Enforces auto-logout on inactivity using a reusable hook.
+ * - Supports biometric authentication for unlocking and account management.
+ * - Provides UI for adding, editing, deleting, and organizing password entries and folders.
+ *
+ * Usage:
+ * - This screen is shown after successful authentication.
+ * - All vault data is stored locally and encrypted; no cloud sync is performed.
+ * - Use the export/import features to backup or restore vault data manually.
+ * - For security, inactivity triggers auto-logout and vault lock.
+ *
+ * Notes:
+ * - Crypto and merge logic are handled by helpers in ./lib.
+ * - See context/VaultContext and context/AuthContext for state management and authentication.
+ * - UI sections are annotated for easier maintenance.
+ */
 
 import React, { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, TextInput, TouchableOpacity, FlatList, Modal, Alert, ScrollView, ActivityIndicator } from 'react-native';
 import { useVault } from './context/VaultContext';
 import { useAuth } from './context/AuthContext';
-// useEffect imported above
-import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
 import { generatePassword } from './lib/password';
-import { Feather } from '@expo/vector-icons';
+import Feather from 'react-native-vector-icons/Feather';
 import { vaultStyles as styles } from './styles/vaultStyles';
 import { copyToClipboard } from './lib/clipboard';
 import { since } from './lib/time';
-import { buildBackupPayload, encryptBackupJson, decryptBackupString } from './lib/vaultIO';
+import { exportVaultBlob, importVaultBlob } from './lib/vaultIO';
 import { mergeBackupData } from './lib/vaultMerge';
 import EntryItem from './components/EntryItem';
 import { useInactivityTimer } from './hooks/useInactivityTimer';
 
-export default function VaultScreen() {
+function VaultScreen() {
+  const navigation = useNavigation();
+  React.useEffect(() => {
+    if (typeof I18nManager !== 'undefined' && I18nManager.isRTL) {
+      I18nManager.forceRTL(false);
+      I18nManager.allowRTL(false);
+    }
+  }, []);
   // Contexts: Vault data and Auth/session state
   const { items, folders, addItem, addItemsBulk, removeItem, updateItem, addFolder, renameFolder, removeFolder } = useVault();
   const { user, logout, canUseBiometrics, enableBiometricForUser, disableBiometricForUser, derivedKey, verifyPassword, hasBiometricForEmail, deleteUserWithPassword } = useAuth();
@@ -62,7 +84,7 @@ export default function VaultScreen() {
   const [addError, setAddError] = useState('');
   // Security: Auto-logout after inactivity
   const { reset: onAnyInteraction } = useInactivityTimer(5 * 60 * 1000, async () => {
-    try { await logout(); } finally { router.replace('/'); }
+    try { await logout(); } finally { navigation.replace('Auth'); }
   });
 
   const canAdd = addTitle.trim() && addUsername.trim() && addPassword;
@@ -84,14 +106,11 @@ export default function VaultScreen() {
     console.log('Folders in UI after update:', folders);
   }, [folders]);
 
-  // Encrypt JSON with current derivedKey and show as text for copy/save
+  // Export encrypted vault blob for copy/save
   const exportVault = async () => {
     try {
-      if (!derivedKey) return Alert.alert('Not ready', 'Please log in first.');
-      const payload = buildBackupPayload({ userEmail: user?.email, folders, items });
-      const enc = encryptBackupJson(derivedKey, payload);
-      // Save encrypted blob in AsyncStorage
-      await AsyncStorage.setItem('vault_encrypted_blob', enc);
+      if (!derivedKey || !user?.email) return Alert.alert('Not ready', 'Please log in first.');
+      const enc = await exportVaultBlob(user.email);
       setExportBlob(enc);
       setShowExportModal(true);
     } catch (e) {
@@ -109,13 +128,12 @@ export default function VaultScreen() {
 
   // Handle import process: decrypt and merge backup data
   const importVault = async () => {
-    console.log("Folders state before importing:", folders);
+    console.log('Folders state before importing:', folders);
     try {
-      const data = decryptBackupString(derivedKey, importBlob);
-      console.log("🔥 Import using mergeBackupData");
-      console.log("Folders state before importing:", folders);
-      console.log("Decrypted backup payload:", JSON.stringify(data, null, 2));
-
+      const data = await importVaultBlob(derivedKey, importBlob);
+      console.log('🔥 Import using mergeBackupData');
+      console.log('Folders state before importing:', folders);
+      console.log('Decrypted backup payload:', data);
       const { added, skipped, currentFolders, folderMapping } = await mergeBackupData(data, { items, folders, addFolder, addItemsBulk });
       //setFolders(currentFolders);
 
@@ -578,7 +596,7 @@ export default function VaultScreen() {
             <TouchableOpacity style={[styles.secondaryBtn]} onPress={() => { setShowActions(false); importEncryptedBackup(); }}>
               <Text style={{ color: 'white', fontWeight: '700' }}>Import Vault</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryBtn, { backgroundColor: '#fbbf24' }]} onPress={async () => { setShowActions(false); await logout(); router.replace('/'); }}>
+            <TouchableOpacity style={[styles.secondaryBtn, { backgroundColor: '#fbbf24' }]} onPress={async () => { setShowActions(false); await logout(); navigation.replace('Auth'); }}>
               <Text style={{ color: '#1f2937', fontWeight: '700' }}>Logout</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -619,7 +637,7 @@ export default function VaultScreen() {
                     await deleteUserWithPassword(user.email, deletePwd.trim());
                     setShowDeleteModal(false);
                     setDeletePwd('');
-                    router.replace('/');
+                    navigation.replace('Auth');
                   } catch (e) {
                     Alert.alert('Delete failed', e.message || 'Wrong password');
                   } finally {
@@ -647,3 +665,4 @@ export default function VaultScreen() {
   );
 }
 // Styles and helpers are imported from dedicated modules above
+export default VaultScreen;

@@ -1,4 +1,3 @@
-// ...existing code...
 // Prevent expo-router from treating this file as a route
 // ...existing code...
 /**
@@ -9,67 +8,59 @@
  * Includes logging for import/export events and errors.
  */
 
-import CryptoJS from 'crypto-js';
-import * as Crypto from 'expo-crypto';
+import 'react-native-get-random-values';
+import { getItem, setItem } from './secureStore';
+import { encryptWithKey, decryptWithKey } from './cryptoHelpers';
+import { keyFor } from '../context/VaultContext';
+// Helper functions for base64 encoding/decoding
+function encodeBase64(str) {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(str, 'utf8').toString('base64');
+  }
+  // fallback for browser
+  return btoa(unescape(encodeURIComponent(str)));
+}
+
+function decodeBase64(base64) {
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(base64, 'base64').toString('utf8');
+  }
+  // fallback for browser
+  return decodeURIComponent(escape(atob(base64)));
+}
 
 /**
- * buildBackupPayload
- *
- * Constructs a backup payload from user email, folders, and items.
- * Logs payload creation.
- * @param {object} params - { userEmail, folders, items }
- * @returns {object} - Backup payload object
+ * exportVaultBlob
+ * Exports the encrypted vault blob from AsyncStorage for the current user.
+ * @param {string} email - User email
+ * @returns {Promise<string>} - Encrypted vault blob
  */
-export function buildBackupPayload({ userEmail, folders, items }) {
-  const payload = {
-    version: 3,
-    createdAt: Date.now(),
-    emailHash: userEmail ? CryptoJS.SHA256('user:' + userEmail.trim().toLowerCase()).toString() : 'unknown',
-    folders: folders || [],
-    entries: (items || []).map(i => ({
-      t: i.title,
-      u: i.username,
-      p: i.password,
-      ts: i.lastChangedAt || Date.now(),
-      id: i.id,
-      folderId: i.folderId || null,
-    })),
-  };
-  console.log('[VaultIO] Backup payload built:', payload);
-  return payload;
+export async function exportVaultBlob(email) {
+  const key = keyFor(email);
+  const blob = await getItem(key);
+  if (!blob) throw new Error('No vault data found');
+  // Encode the blob as base64 for export
+  return encodeBase64(blob);
 }
 
-export function encryptBackupJson(derivedKey, payload) {
+/**
+ * importVaultBlob
+ * Imports and decrypts the encrypted vault blob for the current user.
+ * @param {string} derivedKey - User's derived key
+ * @param {string} encryptedBlob - Encrypted vault blob
+ * @returns {Promise<object>} - Decrypted vault data (items, folders)
+ */
+export async function importVaultBlob(derivedKey, encryptedBlob) {
   try {
-    const plain = JSON.stringify(payload);
-    const key = CryptoJS.enc.Hex.parse(derivedKey);
-    // Always use expo-crypto for IV generation
-    const buf = new Uint8Array(16);
-    // Synchronously supported in Expo Go
-    Crypto.getRandomValues(buf);
-    const iv = CryptoJS.enc.Hex.parse(Array.from(buf).map(b => b.toString(16).padStart(2, '0')).join(''));
-    const cipher = CryptoJS.AES.encrypt(plain, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-    const result = `${CryptoJS.enc.Hex.stringify(iv)}:${cipher.toString()}`;
-    console.log('[VaultIO] Backup encrypted');
-    return result;
-  } catch (e) {
-    console.error('[VaultIO] Backup encryption failed:', e);
-    throw e;
-  }
-}
-
-export function decryptBackupString(derivedKey, encrypted) {
-  try {
-    const [ivHex, ct] = String(encrypted).split(':');
-    const key = CryptoJS.enc.Hex.parse(derivedKey);
-    const iv = CryptoJS.enc.Hex.parse(ivHex);
-    const bytes = CryptoJS.AES.decrypt(ct, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-    const plain = bytes.toString(CryptoJS.enc.Utf8);
-    const data = JSON.parse(plain);
-    console.log('[VaultIO] Backup decrypted');
+    // Decode base64 to JSON string
+    const jsonStr = decodeBase64(encryptedBlob);
+    const encryptedObj = JSON.parse(jsonStr);
+    const decrypted = await decryptWithKey(derivedKey, encryptedObj);
+    const data = JSON.parse(decrypted);
+    console.log('[VaultIO] Vault blob imported and decrypted', data);
     return data;
   } catch (e) {
-    console.error('[VaultIO] Backup decryption failed:', e);
+    console.error('[VaultIO] Vault blob import/decryption failed:', e);
     throw e;
   }
 }

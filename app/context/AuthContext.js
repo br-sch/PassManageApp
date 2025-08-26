@@ -16,7 +16,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getItem, setItem, deleteItem } from '../lib/secureStore';
 import CryptoJS from 'crypto-js';
-import * as LocalAuthentication from 'expo-local-authentication';
+import ReactNativeBiometrics from 'react-native-biometrics';
 import { Platform } from 'react-native';
 
 // Keys for storage
@@ -100,14 +100,22 @@ export function AuthProvider({ children }) {
    * Logs registration events and errors.
    */
   const register = async (email, password) => {
+    if (!email || !email.trim()) {
+      throw new Error('Username cannot be empty');
+    }
+    if (!password || !password.trim()) {
+      throw new Error('Password cannot be empty');
+    }
     const ehash = emailHash(email);
     const existingVerifier = await getItem(verifierKeyFor(ehash));
     if (existingVerifier) {
       console.warn(`[Auth] Registration failed: User already exists (${email})`);
       throw new Error('User already exists');
     }
-    const saltHex = emailSaltHex(email);
-    const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS }).toString();
+  const saltHex = emailSaltHex(email);
+  const keyWordArray = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS });
+  const keyBase64 = CryptoJS.enc.Base64.stringify(keyWordArray);
+  const key = keyBase64;
     // store verifier as HMAC(no RNG required)
     const verifier = makeVerifierMac(key);
     await setItem(verifierKeyFor(ehash), JSON.stringify(verifier));
@@ -140,8 +148,10 @@ export function AuthProvider({ children }) {
       console.warn(`[Auth] Login failed: Invalid credentials (${email})`);
       throw new Error('Invalid credentials');
     }
-    const saltHex = emailSaltHex(email);
-    const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS }).toString();
+  const saltHex = emailSaltHex(email);
+  const keyWordArray = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS });
+  const keyBase64 = CryptoJS.enc.Base64.stringify(keyWordArray);
+  const key = keyBase64;
     try {
       const ok = checkVerifier(verifier, key);
       if (!ok) throw new Error('Invalid credentials');
@@ -183,10 +193,12 @@ export function AuthProvider({ children }) {
   // We store an encrypted blob of the verifier key under OS-protected storage.
   const canUseBiometrics = async () => {
     try {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      return compatible && enrolled;
-    } catch {
+      const rnBiometrics = new ReactNativeBiometrics();
+      const { available, biometryType } = await rnBiometrics.isSensorAvailable();
+      console.log('[Biometric] Sensor available:', available, 'Type:', biometryType);
+      return available && biometryType !== null;
+    } catch (e) {
+      console.log('[Biometric] Sensor check failed:', e);
       return false;
     }
   };
@@ -212,8 +224,10 @@ export function AuthProvider({ children }) {
     const ehash = emailHash(email);
     const verifier = await getItem(verifierKeyFor(ehash));
     if (!verifier) throw new Error('User not found');
-    const saltHex = emailSaltHex(email);
-    const key = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS }).toString();
+  const saltHex = emailSaltHex(email);
+  const keyWordArray = CryptoJS.PBKDF2(password, CryptoJS.enc.Hex.parse(saltHex), { keySize: 256 / 32, iterations: PBKDF2_ITERATIONS });
+  const keyBase64 = CryptoJS.enc.Base64.stringify(keyWordArray);
+  const key = keyBase64;
     const ok = checkVerifier(verifier, key);
     if (!ok) throw new Error('Wrong password');
     return key;
@@ -225,7 +239,8 @@ export function AuthProvider({ children }) {
     if (!enabled) throw new Error('Biometric not enabled');
     const ok = await canUseBiometrics();
     if (!ok) throw new Error('Biometric unavailable');
-    const res = await LocalAuthentication.authenticateAsync({ promptMessage: 'Unlock vault', disableDeviceFallback: false });
+    const rnBiometrics = new ReactNativeBiometrics();
+    const res = await rnBiometrics.simplePrompt({ promptMessage: 'Unlock vault' });
     if (!res.success) throw new Error('Authentication failed');
     const storedKey = await getItem(`pm_bio_key_${ehash}`);
     if (!storedKey) throw new Error('No biometric key stored');

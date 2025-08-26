@@ -6,74 +6,58 @@
  * Includes logging for key crypto events and errors.
  */
 
-import CryptoJS from 'crypto-js';
+import AesGcmCrypto from 'react-native-aes-gcm-crypto';
 
 /**
  * encryptWithKey
- *
- * Encrypts plaintext using AES-CBC with the provided hex key.
- * Logs encryption events and errors.
- * @param {string} hexKey - AES key in hex
+ * Encrypts plaintext using AES-GCM with the provided base64 key.
+ * @param {string} base64Key - AES key in base64
  * @param {string} plain - Plaintext to encrypt
- * @returns {string} - iv:ciphertext string
+ * @returns {Promise<object>} - { iv, tag, content }
  */
-export function encryptWithKey(hexKey, plain) {
+export async function encryptWithKey(base64Key, plain) {
   try {
-    const key = CryptoJS.enc.Hex.parse(hexKey);
-    let iv;
-    try {
-      iv = CryptoJS.lib.WordArray.random(16);
-    } catch (e) {
-      // Fallback if native RNG is unavailable
-      const seed = CryptoJS.SHA256(`${Date.now()}:${hexKey}`).toString();
-      iv = CryptoJS.enc.Hex.parse(seed.slice(0, 32));
-    }
-    const cipher = CryptoJS.AES.encrypt(plain, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-    const result = `${CryptoJS.enc.Hex.stringify(iv)}:${cipher.toString()}`;
-    console.log('[Crypto] Encryption successful');
-    return result;
+    const encrypted = await AesGcmCrypto.encrypt(plain, false, base64Key);
+    // encrypted = { iv, tag, content }
+    console.log('[Crypto] AES-GCM encryption successful:', encrypted);
+    return encrypted;
   } catch (e) {
-    console.error('[Crypto] Encryption failed:', e);
+    console.error('[Crypto] AES-GCM encryption failed:', e);
     throw e;
   }
 }
 
 /**
  * decryptWithKey
- *
- * Decrypts ciphertext using AES-CBC with the provided hex key.
- * Logs decryption events and errors.
- * @param {string} hexKey - AES key in hex
- * @param {string} data - iv:ciphertext string
- * @returns {string} - Decrypted plaintext
+ * Decrypts ciphertext using AES-GCM with the provided base64 key.
+ * @param {string} base64Key - AES key in base64
+ * @param {object} encrypted - { iv, tag, content }
+ * @returns {Promise<string>} - Decrypted plaintext
  */
-export function decryptWithKey(hexKey, data) {
+export async function decryptWithKey(base64Key, encrypted) {
+  console.log('[Crypto] Decrypt input:', {
+    encrypted,
+    content: encrypted?.content,
+    iv: encrypted?.iv,
+    tag: encrypted?.tag
+  });
   try {
-    const [ivHex, ct] = String(data).split(':');
-    const key = CryptoJS.enc.Hex.parse(hexKey);
-    const iv = CryptoJS.enc.Hex.parse(ivHex);
-    const bytes = CryptoJS.AES.decrypt(ct, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-    const plain = bytes.toString(CryptoJS.enc.Utf8);
-    console.log('[Crypto] Decryption successful');
+    if (!encrypted || !encrypted.content || !encrypted.iv || !encrypted.tag) {
+      throw new Error('Missing encrypted data fields');
+    }
+    const plain = await AesGcmCrypto.decrypt(
+      encrypted.content,
+      base64Key,
+      encrypted.iv,
+      encrypted.tag,
+      false
+    );
+    console.log('[Crypto] AES-GCM decryption successful:', plain);
     return plain;
   } catch (e) {
-    console.error('[Crypto] Decryption failed:', e);
+    console.error('[Crypto] AES-GCM decryption failed:', e);
     throw e;
   }
 }
 
-/**
- * sha256Hex
- *
- * Computes SHA-256 hash of the input and returns hex string.
- * Logs hashing events.
- * @param {string} input - Input string
- * @returns {string} - SHA-256 hex string
- */
-export function sha256Hex(input) {
-  const hash = CryptoJS.SHA256(input).toString();
-  console.log('[Crypto] SHA-256 hash computed');
-  return hash;
-}
-
-export default { encryptWithKey, decryptWithKey, sha256Hex };
+export default { encryptWithKey, decryptWithKey };

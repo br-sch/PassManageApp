@@ -1,10 +1,23 @@
-// useInactivityTimer
-// A simple hook to auto-run a callback after a period of inactivity.
-// It exposes a reset() function you can call from any interaction handlers.
-//
-// Usage:
-// const { reset } = useInactivityTimer(5 * 60 * 1000, onTimeout);
-// <View onTouchStart={reset}>...</View>
+/**
+ * useInactivityTimer
+ *
+ * React hook to trigger a callback after a period of user inactivity.
+ *
+ * @param {number} timeoutMs - The inactivity timeout in milliseconds.
+ * @param {Function} onTimeout - Callback function to run after timeout.
+ * @returns {{ reset: Function, clear: Function }}
+ *   reset: Call to restart the inactivity timer (e.g., on user interaction).
+ *   clear: Call to manually clear the timer.
+ *
+ * @example
+ * const { reset } = useInactivityTimer(5 * 60 * 1000, onTimeout);
+ * <View onTouchStart={reset}>...</View>
+ *
+ * Notes:
+ * - Call `reset` in any event handler that should count as activity.
+ * - The timer is automatically reset when the hook mounts or when timeoutMs changes.
+ * - Always clear the timer on unmount to avoid memory leaks.
+ */
 import { useEffect, useRef } from 'react';
 
 export function useInactivityTimer(timeoutMs, onTimeout) {

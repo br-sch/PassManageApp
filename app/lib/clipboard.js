@@ -7,7 +7,7 @@
  * Includes logging for copy events and errors.
  */
 
-import * as Clipboard from 'expo-clipboard';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { Platform, Alert } from 'react-native';
 
 /**
@@ -53,12 +53,12 @@ export async function copyToClipboard(text, successMsg = 'Password copied') {
     }
   } else {
     try {
-      await Clipboard.setStringAsync(text);
+      Clipboard.setString(text);
       Alert.alert('Copied', successMsg);
-      console.log('[Clipboard] Text copied using Expo Clipboard');
+      console.log('[Clipboard] Text copied using RN Clipboard');
     } catch (e) {
       Alert.alert('Copy failed', 'Could not copy to clipboard');
-      console.error('[Clipboard] Expo Clipboard copy failed:', e);
+      console.error('[Clipboard] RN Clipboard copy failed:', e);
     }
   }
 }

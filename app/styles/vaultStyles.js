@@ -1,5 +1,20 @@
-// Styles: Vault screen
-// Centralized here to keep JSX lean and consistent across components
+/**
+ * vaultStyles.js
+ *
+ * Centralized style definitions for the Vault screen in Vaulton.
+ *
+ * Purpose:
+ * - Provides a consistent dark theme for all vault-related UI components.
+ * - Centralizes style management to keep JSX lean and ensure consistency across components.
+ *
+ * Usage:
+ * - Import as `vaultStyles` in Vault screen and related components to style containers, cards, buttons, inputs, and text.
+ * - Designed for use with React Native's StyleSheet API.
+ *
+ * Theming:
+ * - Colors and layout are chosen for accessibility and a modern dark appearance.
+ * - Easily extendable for new UI elements or theme changes.
+ */
 import { StyleSheet } from 'react-native';
 
 // Styles for the Vault screen

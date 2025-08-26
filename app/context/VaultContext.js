@@ -13,10 +13,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { getItem, setItem } from '../lib/secureStore';
 import { useAuth } from './AuthContext';
+import { encryptWithKey, decryptWithKey } from '../lib/cryptoHelpers';
 import CryptoJS from 'crypto-js';
 
 // Each user has a vault stored under a namespaced key.
-const keyFor = (email) => {
+export const keyFor = (email) => {
   const ehash = CryptoJS.SHA256(`user:${String(email).trim().toLowerCase()}`).toString();
   return `pm_vault_${ehash}`;
 };
@@ -32,41 +33,22 @@ export function VaultProvider({ children }) {
   useEffect(() => {
     (async () => {
       if (user?.email) {
-        const raw = (await getItem(keyFor(user.email))) || '[]';
-        let stored;
-        try { stored = JSON.parse(raw); } catch { stored = []; }
-        if (derivedKey) {
+        const raw = await getItem(keyFor(user.email));
+        if (raw && derivedKey) {
           try {
-            if (Array.isArray(stored)) {
-              // Legacy shape: items only
-              const dec = stored.map((i) => ({
-                id: i.id,
-                title: decryptText(i.title, derivedKey),
-                username: decryptText(i.username, derivedKey),
-                password: decryptText(i.password, derivedKey),
-                lastChangedAt: i.lastChangedAt ?? Date.now(),
-                folderId: i.folderId ?? null,
-              }));
-              setItems(dec);
-              setFolders([]);
-            } else if (stored && stored.items) {
-              const decItems = (stored.items || []).map((i) => ({
-                id: i.id,
-                title: decryptText(i.title, derivedKey),
-                username: decryptText(i.username, derivedKey),
-                password: decryptText(i.password, derivedKey),
-                lastChangedAt: i.lastChangedAt ?? Date.now(),
-                folderId: i.folderId ?? null,
-              }));
-              const decFolders = (stored.folders || []).map((f) => ({ id: f.id, name: decryptText(f.name, derivedKey) }));
-              setItems(decItems);
-              setFolders(decFolders);
+            // Decrypt the vault blob
+            const encryptedObj = JSON.parse(raw);
+            const decrypted = await decryptWithKey(derivedKey, encryptedObj);
+            const stored = JSON.parse(decrypted);
+            if (stored && stored.items) {
+              setItems(stored.items);
+              setFolders(stored.folders);
             } else {
               setItems([]);
               setFolders([]);
             }
           } catch (e) {
-            console.warn('Decryption failed', e);
+            console.warn('Vault decryption failed', e);
             setItems([]);
             setFolders([]);
           }
@@ -85,17 +67,14 @@ export function VaultProvider({ children }) {
   const persist = async (nextItems, nextFolders = folders) => {
     setItems(nextItems);
     setFolders(nextFolders);
-    if (user?.email) {
-      const encItems = nextItems.map((i) => ({
-        id: i.id,
-        title: encryptText(i.title, derivedKey),
-        username: encryptText(i.username, derivedKey),
-        password: encryptText(i.password, derivedKey),
-        lastChangedAt: i.lastChangedAt,
-        folderId: i.folderId ?? null,
-      }));
-      const encFolders = nextFolders.map((f) => ({ id: f.id, name: encryptText(f.name, derivedKey) }));
-      await setItem(keyFor(user.email), JSON.stringify({ items: encItems, folders: encFolders }));
+    if (user?.email && derivedKey) {
+      const vaultBlob = JSON.stringify({ items: nextItems, folders: nextFolders });
+      try {
+        const encrypted = await encryptWithKey(derivedKey, vaultBlob);
+        await setItem(keyFor(user.email), JSON.stringify(encrypted));
+      } catch (e) {
+        console.error('Vault encryption failed', e);
+      }
     }
   };
 
@@ -239,32 +218,6 @@ export function useVault() {
   const ctx = useContext(VaultContext);
   if (!ctx) throw new Error('useVault must be used within VaultProvider');
   return ctx;
-}
-
-// Helpers
-function encryptText(plain, hexKey) {
-  if (!hexKey) throw new Error('No key to encrypt');
-  const key = CryptoJS.enc.Hex.parse(hexKey);
-  let iv;
-  try {
-    iv = CryptoJS.lib.WordArray.random(16);
-  } catch (e) {
-    // Fallback if native RNG is unavailable: derive IV from timestamp + key hash
-    const seed = CryptoJS.SHA256(`${Date.now()}:${hexKey}`).toString();
-    iv = CryptoJS.enc.Hex.parse(seed.slice(0, 32));
-  }
-  const cipher = CryptoJS.AES.encrypt(plain, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-  // store iv:ciphertext as hex:base64
-  return `${CryptoJS.enc.Hex.stringify(iv)}:${cipher.toString()}`;
-}
-
-function decryptText(enc, hexKey) {
-  if (!hexKey) throw new Error('No key to decrypt');
-  const [ivHex, ct] = String(enc).split(':');
-  const key = CryptoJS.enc.Hex.parse(hexKey);
-  const iv = CryptoJS.enc.Hex.parse(ivHex);
-  const bytes = CryptoJS.AES.decrypt(ct, key, { iv, mode: CryptoJS.mode.CBC, padding: CryptoJS.pad.Pkcs7 });
-  return bytes.toString(CryptoJS.enc.Utf8);
 }
 
 // Prevent expo-router from treating this file as a route by adding a default export

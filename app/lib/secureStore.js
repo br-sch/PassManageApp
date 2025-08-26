@@ -6,7 +6,7 @@
  * Includes logging for storage events and errors.
  */
 
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * getItem
@@ -19,11 +19,15 @@ import * as SecureStore from 'expo-secure-store';
  */
 export async function getItem(key, options) {
   try {
-    const value = await SecureStore.getItemAsync(key, options);
-    //console.log(`[SecureStore] getItem: ${key} => ${value !== null ? 'found' : 'not found'}`);
-    return value;
+    const value = await AsyncStorage.getItem(key);
+    if (value !== null) {
+      console.log(`[AsyncStorage] getItem: ${key} => found`);
+      return value;
+    }
+    console.log(`[AsyncStorage] getItem: ${key} => not found`);
+    return null;
   } catch (e) {
-    console.error(`[SecureStore] getItem error for key ${key}:`, e);
+    console.error(`[AsyncStorage] getItem error for key ${key}:`, e);
     return null;
   }
 }
@@ -39,10 +43,10 @@ export async function getItem(key, options) {
  */
 export async function setItem(key, value, options) {
   try {
-    await SecureStore.setItemAsync(key, value, options);
-    console.log(`[SecureStore] setItem: ${key}`);
+    await AsyncStorage.setItem(key, value);
+    console.log(`[AsyncStorage] setItem: ${key}`);
   } catch (e) {
-    console.error(`[SecureStore] setItem error for key ${key}:`, e);
+    console.error(`[AsyncStorage] setItem error for key ${key}:`, e);
   }
 }
 
@@ -55,10 +59,10 @@ export async function setItem(key, value, options) {
  */
 export async function deleteItem(key) {
   try {
-    await SecureStore.deleteItemAsync(key);
-    console.log(`[SecureStore] deleteItem: ${key}`);
+    await AsyncStorage.removeItem(key);
+    console.log(`[AsyncStorage] deleteItem: ${key}`);
   } catch (e) {
-    console.error(`[SecureStore] deleteItem error for key ${key}:`, e);
+    console.error(`[AsyncStorage] deleteItem error for key ${key}:`, e);
   }
 }
 
