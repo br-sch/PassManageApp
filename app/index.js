@@ -25,7 +25,6 @@ import { View, Text, TextInput, TouchableOpacity, Platform, Image } from 'react-
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from './context/AuthContext';
 import { generatePassword } from './lib/password';
-import { StatusBar } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { authStyles as styles } from './styles/authStyles';
 
@@ -76,7 +75,6 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style={Platform.OS === 'ios' ? 'dark' : 'light'} />
       <View style={styles.brandRow}>
         <Image source={require('../assets/icon.png')} style={styles.brandIcon} accessibilityLabel="App icon" />
         <Text style={styles.title}>Vaulton</Text>

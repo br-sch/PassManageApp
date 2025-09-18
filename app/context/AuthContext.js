@@ -34,8 +34,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     (async () => {
-  const email = await getItem(SESSION_KEY);
-  if (email) setUser({ email });
+      const email = await getItem(SESSION_KEY);
+      // Don't auto-login - require proper authentication
+      // if (email) setUser({ email });
       setLoading(false);
     })();
   }, []);
