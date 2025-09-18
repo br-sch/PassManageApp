@@ -66,5 +66,4 @@ export async function deleteItem(key) {
   }
 }
 
-// Prevent expo-router from treating this file as a route
 export default {};

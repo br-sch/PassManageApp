@@ -1,4 +1,10 @@
-// ...existing code...
+/**
+ * password.js
+ *
+ * Provides password generation and validation helpers for the app.
+ * Includes logging for password generation events and errors.
+ */
+
 import 'react-native-get-random-values';
 import CryptoJS from 'crypto-js';
 
@@ -25,13 +31,6 @@ function shuffle(array) {
   }
   return array;
 }
-
-/**
- * password.js
- *
- * Provides password generation and validation helpers for the app.
- * Includes logging for password generation events and errors.
- */
 
 /**
  * generatePassword
@@ -77,5 +76,3 @@ export function validatePassword(pwd) {
   return strong;
 }
 
-// Prevent expo-router from treating this file as a route
-// ...existing code...

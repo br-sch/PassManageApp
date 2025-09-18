@@ -1,5 +1,3 @@
-// Prevent expo-router from treating this file as a route
-// ...existing code...
 /**
  * vaultIO.js
  *

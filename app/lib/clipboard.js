@@ -1,4 +1,3 @@
-// ...existing code...
 /**
  * clipboard.js
  *
